@@ -1,0 +1,206 @@
+#include "ROBOT.h"
+
+//creo l'oggeto per il motore destro
+MOTORE destro; 
+
+//creo l'oggeto per il motore sinistro
+MOTORE sinistro;
+
+/*
+vanno passati i pin di arduino collegati all'integrato (l293dne) che controllano
+i due motori e un parametro per la rotazione dei motori. 
+*/
+void ROBOT::inizia(int m1ora, int m1anti, int m1ena, int m2ora, int m2anti, int m2ena, int parametro)
+{
+     //inizializzo i due motori con i pin e il parametro per la rotazione
+     destro.inizia(m1ora,m1anti,m1ena);
+     sinistro.inizia(m2ora,m2anti,m2ena);
+     para=parametro;
+}
+
+/*
+funzione principale per il funzionamento del robot. Come parametri vanno passsati
+i valori letti dal controller. In funzione a questi parametri si vanno a controllare
+la velocità e il senso di rotazione di ogni singolo motore e quindi il movimento
+dell'intero robot. Parametri della funzione:
+1) Per prima la velocità che dovrebbe avere il robot. un valore che va da 0 a 255.
+2) Per secondo il "freno" che va a contrapporsi al valore della velocità anche 
+   questo parametro va da 0 a 255.
+3) Per terzo lo sterzo: un valore che va da -32768 a +32767. In funzione al suo 
+   segno si girerà a destra se positivo a sinistra altrimenti mentre in funzione
+   al modulo si girerà di più o di meno.
+4) Il quarto parametro è il freno che ferma tutte le ruote. Qesto parametro ha 
+   la precedenza su tutti gli altri ovvero
+   premendo questo tasto i motori si bloccano e non accettano altri comandi 
+   finche non viene rilasciato il pulsante del freno. 
+5) Il quinto parametro indica un "potenziamento" dei motori ovvero se non si 
+   schiaccia questo tasto la velocità massima è impostata a 200 mentre premendolo
+   la velocità si porta al massimo ovvero a 255.
+In questa funzione si vanno a comandare i motori una volta sola per ogni ciclo 
+così facendo non si sovrappongono segnali di controllo dei motori altrimenti 
+difficili da gestire. è possibile fare questo grazie all'istruzione return; che 
+ferma l'esecuzione della funzione dov'è chiamata e manda avanti il resto del programma
+*/
+void ROBOT::muovi(int acc, int deAcc, int sterzo, int freno, int massimo)
+{
+     /*
+     max indica la velocità massima
+     real e ste sono utilizzate per gestire lo sterzo del robot
+     dace per gestire il movimento in generale sia in rotazione che non.
+     */
+     int max,real,ste,dace;
+     
+     /*
+     controllo sul tasto per il "potenziamento" dei motori
+     se è premuto la velocità massima diventa 255 altrimenti rimane 200
+     */
+     if(massimo==1)  
+          max=255;
+     else
+          max=200;
+     //ricalcola la velocità in funzione alla velocità massima impostata
+     acc=map(acc,0,255,0,max);
+     deAcc=map(deAcc,0,255,0,max-50);
+     
+     //senso e velocità di rotazione dei motori
+     dace=acc-deAcc; 
+     
+     //tutto avviene se il tasto del freno non è premuto
+     if(freno==0) 
+     {
+          //condizione di stallo simile al freno
+          if(dace<para && dace>-para) 
+          {
+               dace=0;
+          }
+          
+          /*
+          se dal controller non arriva un impulso per sterzare il robot va avanti,
+          indietro oppure sta fermo tenendo presente il valore dei tasti per 
+          l'accelerazione e la decelerazione. Altrimenti viene gestito lo sterzo 
+          */        
+          if(sterzo<8000 && sterzo>-8000) 
+          {
+               destro.muovi(dace);
+               sinistro.muovi(dace);
+               return;
+          }
+          else
+          {
+              //gira a destra
+              if(sterzo>8000)
+              { 
+                   //gira a destra quando va avanti          
+                   if(dace>para)
+                   {
+                        //sterzo effettivo
+                        real=map(sterzo,8000,32768,para,255);
+                        
+                        //aggiustamento sulla velocità del robot
+                        ste=map(dace,para,255,0,map(real,para,255,0,20));
+                        
+                        //gestione motori       
+                        destro.muovi(dace-real-ste);
+                        sinistro.muovi(dace-ste);
+                        return;
+                   }
+                   
+                   //gira a destra quando va indietro
+                   if(dace<((-1)*para))
+                   {
+                       //sterzo effettivo
+                        real=map(sterzo,8000,32768,para,255);
+                        
+                        //aggiustamento sulla velocità del robot
+                        ste=map(dace,-255,-para,map(real,para,255,0,20),0);
+                        
+                        //gestione motori       
+                        destro.muovi(dace+real+ste);
+                        sinistro.muovi(dace+ste);
+                        return;
+                   }
+                   
+                   //gira a destra quando è fermo. gira su se stesso
+                   if(dace==0)
+                   {
+                        real=map(sterzo,8000,32768,para,210);
+                        //un motore in un senso l'altro nell'altro gira su se stesso
+                        destro.muovi(-real);
+                        sinistro.muovi(real);
+                   }
+              }
+              
+              //gira a sinistra
+              if(sterzo<-8000)
+              {
+                   //gira a sinistra quando va avanti          
+                   if(dace>para)
+                   {
+                        //sterzo effettivo
+                        real=map(sterzo,-32767,-8000,255,para);
+                        
+                        //aggiustamento sulla velocità del robot
+                        ste=map(dace,para,255,0,map(real,para,255,0,20));
+                        
+                        //gestione motori       
+                        sinistro.muovi(dace-real-ste);
+                        destro.muovi(dace-ste);
+                        return;
+                   }
+                   
+                   //gira a sinistra quando va indietro
+                   if(dace<((-1)*para))
+                   {
+                       //sterzo effettivo
+                        real=map(sterzo,-32767,-8000,255,para);
+                        
+                        //aggiustamento sulla velocità del robot
+                        ste=map(dace,-255,-para,map(real,para,255,0,20),0);
+                        
+                        //gestione motori       
+                        sinistro.muovi(dace+real+ste);
+                        destro.muovi(dace+ste);
+                        return;
+                   }
+                   if(dace==0)
+                   {
+                        real=map(sterzo,-32767,-8000,210,para);
+                        //un motore in un senso l'altro nell'altro gira su se stesso
+                        sinistro.muovi(-real);
+                        destro.muovi(real);
+                   }
+              } 
+          }        
+     }
+     //se il pulsante del freno fosse premuto ferma tutto
+     else
+     {
+         destro.muovi(0);
+         sinistro.muovi(0);
+         return;
+     }
+}
+
+void ROBOT::avanti(int ac)
+{
+	destro.muovi(ac);
+	sinistro.muovi(ac);
+}
+
+void ROBOT::gira(int temp,int d)
+{
+	if(d==0)
+	{
+		destro.muovi(-200);
+		sinistro.muovi(200);
+		delay(d);
+		return;
+	}
+	else
+	{
+		destro.muovi(200);
+		sinistro.muovi(-200);
+		delay(d);
+		return;
+	}	
+}

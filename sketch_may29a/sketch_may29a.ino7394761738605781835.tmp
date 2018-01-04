@@ -1,0 +1,27 @@
+#include <TimerOne.h>
+#include <time.h>
+#include <TimeLib.h>
+
+time_t tempo;
+
+void setup() {  
+
+  Timer1.initialize(6000000000);
+  Timer1.attachInterrupt(runtime);
+
+  Serial.begin(9600);
+
+  tempo = (unsigned long) 0;
+
+}
+
+void runtime() {
+  String minuti = "minuti ";
+  String secondi = " secondi ";
+  Serial.println(minuti + minute(tempo) + secondi + second(tempo));
+  tempo = (time_t) ((unsigned long) tempo + 30);
+}
+
+void loop() {
+  
+}
