@@ -1,3 +1,28 @@
+void attivaLogger() {
+  if (DEBUG) {
+    Serial.begin(9600);
+    while (!Serial);
+  }
+}
+
+void logger(char text[]) {
+  if (DEBUG) {
+    Serial.println(text);
+  }
+}
+
+void logger(String text) {
+  if (DEBUG) {
+    Serial.println(text);
+  }
+}
+
+void logger(uint32_t text) {
+  if (DEBUG) {
+    Serial.println(text);
+  }
+}
+
 void attivaWarning() {
   digitalWrite(LED_WARNING, HIGH);
 }

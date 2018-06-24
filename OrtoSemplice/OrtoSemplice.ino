@@ -21,26 +21,20 @@ void setup() {
 
   attivaWarning();
 
-  if(DEBUG) {
-    Serial.begin(9600);
-    while (!Serial);
-    Serial.println("Comunicazione seriale attivata");
-    Serial.println("Inizializzo manager");
-  }  
+  attivaLogger();
+
+  logger("Comunicazione seriale attivata");
+  logger("Inizializzo manager");
 
   // Inizializzo il manager
   manager.inizializza();
 
-  if(DEBUG) {
-    Serial.println("Collego interrupt");  
-  }
+  logger("Collego interrupt");
 
   // Collego interrupt sul bottone
   attachInterrupt(BOTTONE, interrupt, RISING);
 
-  if(DEBUG) {
-    Serial.println("Avvio timer");
-  }
+  logger("Avvio timer");
 
   // Avvio il timer
   MsTimer2::start();
@@ -52,19 +46,17 @@ void setup() {
 void routine() {
 
   attivaWarning();
-  
+
   // Il managare esegue la routine
   manager.routine(tempo);  
 
   // Incremento il tempo
   tempo = tempo + PERIODO_ESECUZIONE_ROUTINE;
 
-  if(DEBUG) {
-    Serial.println(tempo); 
-  }
+  logger(tempo);
 
   disattivaWarning();
-  
+
 }
 
 void interrupt() {
@@ -85,7 +77,7 @@ void interrupt() {
       String sAccesoS = " secondi: ";
       String sAccesoM = " minuti: ";
       String result = sZona + zona + sAccesoS + acceso + sAccesoM + (acceso / 60);  
-      Serial.println(result);
+      logger(result);
     }
 
     // Aggiungo l'azione al manager
